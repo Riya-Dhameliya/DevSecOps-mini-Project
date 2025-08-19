@@ -32,11 +32,12 @@ jobs:
       # 5️⃣ SonarQube scan
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
             -Dsonar.projectKey=DevSecOps-mini-Project
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       # 6️⃣ Build Docker image
       - name: Build Docker image
@@ -48,6 +49,6 @@ jobs:
         with:
           image-ref: 'devsecops-mini-project:latest'
           format: 'table'
-          exit-code: '1' # ❌ fail pipeline if vulnerabilities are found
+          exit-code: '1'   # ❌ Fail if High/Critical CVEs found
           severity: 'CRITICAL,HIGH'
 
