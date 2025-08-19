@@ -25,11 +25,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # 4️⃣ Run tests (optional)
+      # 4️⃣ Run tests
       - name: Run tests
         run: npm test || echo "No tests found"
 
-      # 5️⃣ SonarQube scan
+      # 5️⃣ SonarQube Scan (self-hosted in Minikube)
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
         env:
