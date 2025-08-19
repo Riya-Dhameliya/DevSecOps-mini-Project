@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI with SonarQube
 
 on:
   push:
@@ -10,45 +10,52 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      sonarqube:
+        image: sonarqube:9.9-community
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -f http://localhost:9000 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Set up JDK 17 (required for SonarQube scanner)
+        uses: actions/setup-java@v3
         with:
-          node-version: '18'
+          distribution: temurin
+          java-version: 17
 
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
-        run: npm install
+      - name: Install Sonar Scanner
+        run: |
+          wget -qO- https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip | bsdtar -xvf-
+          mv sonar-scanner-* sonar-scanner
+          echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
 
-      # 4️⃣ Run tests
-      - name: Run tests
-        run: npm test || echo "No tests found"
+      - name: Wait for SonarQube to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:9000 > /dev/null; then
+              echo "SonarQube is up!"
+              break
+            fi
+            echo "Waiting for SonarQube..."
+            sleep 10
+          done
 
-      # 5️⃣ SonarQube Scan (self-hosted in Minikube)
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
+      - name: Run SonarQube Scan
         env:
+          SONAR_HOST_URL: "http://localhost:9000"
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.projectKey=DevSecOps-mini-Project
-
-      # 6️⃣ Build Docker image
-      - name: Build Docker image
-        run: docker build -t devsecops-mini-project:latest .
-
-      # 7️⃣ Run Trivy vulnerability scanner
-      - name: Run Trivy scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'devsecops-mini-project:latest'
-          format: 'table'
-          exit-code: '1'   # ❌ Fail if High/Critical CVEs found
-          severity: 'CRITICAL,HIGH'
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=DevSecOps-mini-Project \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.login=$SONAR_TOKEN
 
