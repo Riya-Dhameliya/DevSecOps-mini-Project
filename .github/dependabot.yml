@@ -1,10 +1,13 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"  # Location of your package.json
+    directory: "/" # Location of package.json
     schedule:
       interval: "daily"
-    commit-message:
-      prefix: "deps"
     open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
 
